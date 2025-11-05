@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to My Shop</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f6f9fc;
+        font-family: 'Poppins', Arial, sans-serif;
+        color: #374151;
+      }
+      .container {
+        background-color: #ffffff;
+        margin: 30px auto;
+        padding: 40px 25px;
+        max-width: 600px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+      .logo {
+        text-align: center;
+      }
+      .logo img {
+        width: 120px;
+      }
+      h1 {
+        text-align: center;
+        font-size: 24px;
+        font-weight: 600;
+        color: #111827;
+        margin-top: 20px;
+        line-height: 1.4;
+      }
+      p {
+        text-align: center;
+        font-size: 16px;
+        line-height: 1.8;
+        margin: 15px 0;
+      }
+      .button {
+        display: inline-block;
+        background-color: #2563eb;
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 600;
+        border-radius: 6px;
+        padding: 12px 24px;
+        margin-top: 20px;
+      }
+      .footer {
+        text-align: center;
+        font-size: 13px;
+        color: #9ca3af;
+        margin-top: 30px;
+        line-height: 1.6;
+      }
+      a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">
+        <img
+          src="https://res.cloudinary.com/demo/image/upload/v1700000000/ecommerce-logo.png"
+          alt="My Shop"
+        />
+      </div>
+
+      <h1>Welcome to My Shop, <%= firstName %> 🎉</h1>
+
+      <p>
+        We’re excited to have you onboard! My Shop is your one-stop
+        e-commerce platform for quality products, exclusive deals, and a
+        seamless shopping experience across regions.
+      </p>
+
+      <p>Start exploring today and find amazing products just for you.</p>
+
+      <div style="text-align: center">
+        <a href="<%= data %>" class="button">Start Shopping</a>
+      </div>
+
+      <p style="margin-top: 25px; color: #6b7280">
+        If you didn’t create this account, please ignore this email.
+      </p>
+    </div>
+
+    <div class="footer">
+      © <%= new Date().getFullYear() %> My Shop. All rights reserved.<br />
+      Lagos, Nigeria<br />
+      Need help?
+      <a href="mailto:support@myshop.com">support@myshop.com</a>
+    </div>
+  </body>
+</html>

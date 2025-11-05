@@ -2,21 +2,21 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import mongoSanitize from 'express-mongo-sanitize';
 import cors from 'cors';
 import morgan from 'morgan';
 
+import userRoutes from './routes/userRoutes';
+import { globalErrorHandler } from './utils/errorHandler';
+import { AppError } from './utils/AppError';
+
 const app: Express = express();
 
-// 1️⃣ Use morgan only in development
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// 2️⃣ Security headers
 app.use(helmet());
 
-// 3️⃣ CORS
 app.use(
   cors({
     origin: process.env.CLIENT_URL || '*',
@@ -27,38 +27,22 @@ app.use(
 app.set('trust proxy', 1);
 console.info('trust proxy setting:', app.get('trust proxy'));
 
-// 4️⃣ Rate limiter
 const limiter = rateLimit({
   max: 100,
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    status: 429,
-    error: 'Too many requests from this IP, please try again in an hour!',
-  },
-  handler: (req: Request, res: Response): void => {
-    res.status(429).json({
-      success: false,
-      message: 'Too many requests, please slow down.',
-    });
-  },
+  message: 'Too many requests, please try again in an hour!',
 });
-
 app.use('/api', limiter);
 
-// 5️⃣ Body parser & cookie parser
 app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 
-// 6️⃣ Data sanitization against NoSQL injection
-app.use(mongoSanitize());
-
-// 7️⃣ Extra sanitization for unsafe keys
+// Optional custom sanitization middleware
 app.use((req: Request, res: Response, next: NextFunction): void => {
   const sanitize = (obj: Record<string, unknown> | undefined): void => {
     if (!obj || typeof obj !== 'object') return;
-
     for (const key of Object.keys(obj)) {
       if (/^\$/.test(key) || /\./.test(key)) {
         const safeKey = key.replace(/^\$|\./g, '_');
@@ -68,18 +52,19 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
     }
   };
 
-  sanitize(req.body as Record<string, unknown>);
-  sanitize(req.query as Record<string, unknown>);
-  sanitize(req.params as Record<string, unknown>);
-
+  sanitize(req.body);
+  sanitize(req.query);
+  sanitize(req.params);
   next();
 });
 
-// 8️⃣ Handle unknown routes
-app.all(/.*/, (req: Request, res: Response): void => {
-  res.status(404).json({
-    message: `Can't find ${req.originalUrl} on this server!`,
-  });
+app.use('/api/v1/users', userRoutes);
+
+// ✅ FIXED catch-all route
+app.all(/.*/, (req: Request, _res: Response, next: NextFunction) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
+
+app.use(globalErrorHandler);
 
 export default app;

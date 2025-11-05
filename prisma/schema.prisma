@@ -47,3 +47,14 @@ model Category {
   slug     String    @unique
   products Product[]
 }
+
+model User {
+  id          String   @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String   @unique
+  phoneNumber String
+  password    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
