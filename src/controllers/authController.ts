@@ -1,13 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 import { AppError } from '../utils/AppError';
 import { catchAsync } from '../utils/catchAsync';
 import { emailQueue } from '../queues';
 import { signAccessToken, signRefreshToken } from '../utils/jwt';
 import { generateResetToken } from '../utils/generateHash';
-import { Email } from '../utils/appEmail';
+import { AuthUser } from '../types/express';
 
 const prisma = new PrismaClient();
 
@@ -59,8 +60,9 @@ export const signUp = catchAsync(
       return next(new AppError('Email is already registered', 400));
     }
 
-    // salt password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // salt and hash password
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     // create new user
     const newUser = await prisma.user.create({
@@ -141,7 +143,7 @@ export const signin = catchAsync(
       httpOnly: true,
       path: '/',
       sameSite: 'none' as const,
-      maxAge: 15 * 60 * 1000, //15 mins
+      maxAge: 5 * 60 * 1000, //5 mins
     };
 
     const refreshCookieOptions = {
@@ -155,6 +157,7 @@ export const signin = catchAsync(
     res.cookie('access-token', accessToken, accessCookieOptions);
     res.cookie('refresh-token', refreshToken, refreshCookieOptions);
 
+    // create new refresh token to allow multiple device login
     await prisma.refreshToken.create({
       data: {
         token: refreshToken,
@@ -231,6 +234,222 @@ export const forgotPassword = catchAsync(
       data: {
         token: resetToken,
       },
+    });
+  }
+);
+
+interface ResetPasswordRequest extends Request {
+  params: { token?: string };
+  body: { password: string; passwordConfirm: string };
+}
+
+export const resetPassword = catchAsync(
+  async (req: ResetPasswordRequest, res: Response, next: NextFunction) => {
+    // 1. Get plain reset token from URL
+    const { token } = req.params;
+    if (!token) {
+      return next(new AppError('Reset token is missing', 400));
+    }
+
+    // 2. Hash the token (same as in generateResetToken)
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // 3. Find user with matching token + not expired
+    const user = await prisma.user.findFirst({
+      where: {
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      return next(new AppError('Token is invalid or has expired', 400));
+    }
+
+    // 4. Validate password match
+    const { password, passwordConfirm } = req.body;
+    if (!password || !passwordConfirm) {
+      return next(
+        new AppError('Please provide password and confirmation', 400)
+      );
+    }
+    if (password !== passwordConfirm) {
+      return next(new AppError('Passwords do not match', 400));
+    }
+
+    // 5. Hash new password
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 6. Update user and clear reset fields
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      },
+    });
+
+    // revoke all refresh tokens
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+
+    // 8. Respond
+    res.status(200).json({
+      status: 'success',
+      message: 'Password reset successful. Please log in.',
+    });
+  }
+);
+
+interface AuthRequest extends Request {
+  user?: AuthUser;
+}
+
+export const updatePassword = catchAsync(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const { passwordCurrent, newPassword, passwordConfirm } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: {
+        password: true,
+        id: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!passwordCurrent || !newPassword || !passwordConfirm)
+      return next(new AppError('All fields are required', 400));
+
+    if (
+      !user ||
+      // user.role !== 'user' || admins can use the same endpoint, but redirect to dashboard based on the role on the response
+      !(await bcrypt.compare(passwordCurrent, user.password))
+    )
+      return next(new AppError('Current Password is wrong', 401));
+
+    if (newPassword !== passwordConfirm)
+      return next(new AppError('Passwords does not match', 401));
+
+    // salt and hash password
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // sign new access and refresh token
+    const accessToken = signAccessToken(user.id);
+    const refreshToken = signRefreshToken(user.id);
+
+    // Set cookies
+    const accessCookieOptions = {
+      secure: true,
+      httpOnly: true,
+      path: '/',
+      sameSite: 'none' as const,
+      maxAge: 5 * 60 * 1000, //5 mins
+    };
+
+    const refreshCookieOptions = {
+      secure: true,
+      httpOnly: true,
+      path: '/',
+      sameSite: 'none' as const,
+      maxAge: 30 * 24 * 60 * 60 * 1000, //30 days
+    };
+
+    res.cookie('access-token', accessToken, accessCookieOptions);
+    res.cookie('refresh-token', refreshToken, refreshCookieOptions);
+
+    // update user password
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        userAgent: req.get('user-agent'),
+        ipAddress: req.ip,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password update logic goes here',
+      accessToken,
+      refreshToken,
+    });
+  }
+);
+
+export const logout = catchAsync(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const { id } = req.user!;
+
+    // delete all refresh tokens from the user agent
+    await prisma.refreshToken.delete({
+      where: {
+        userId: id,
+        token: req.cookies['refresh-token'],
+      },
+    });
+
+    // Clear the access token cookie
+    res.clearCookie('access-token', {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: true,
+    });
+
+    // Clear the refresh token cookie
+    res.clearCookie('refresh-token', {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: true,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Logged out',
+    });
+  }
+);
+
+export const updateUser = catchAsync(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const user = req.user!;
+
+    const { firstName, lastName, phoneNumber } = req.body;
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: user.id },
+    });
+
+    if (!existingUser) return next(new AppError('User not found', 404));
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber,
+      },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'User updated',
+      data: updatedUser,
     });
   }
 );

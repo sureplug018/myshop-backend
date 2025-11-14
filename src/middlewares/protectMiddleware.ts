@@ -7,16 +7,8 @@ import { AppError } from '../utils/AppError';
 
 const prisma = new PrismaClient();
 
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-}
-
 export const protect = catchAsync(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     // 1. Get tokens
     const accessToken = req.cookies['access-token'];
     const refreshToken = req.cookies['refresh-token'];
@@ -54,7 +46,17 @@ export const protect = catchAsync(
     // 4. Find refresh token in DB
     const storedToken = await prisma.refreshToken.findUnique({
       where: { token: refreshToken },
-      include: { user: { select: { id: true, email: true, role: true } } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
     });
 
     if (!storedToken || storedToken.expiresAt < new Date()) {
@@ -92,6 +94,8 @@ export const protect = catchAsync(
       id: storedToken.user.id,
       email: storedToken.user.email,
       role: storedToken.user.role,
+      firstName: storedToken.user.firstName,
+      lastName: storedToken.user.lastName,
     };
 
     next();
