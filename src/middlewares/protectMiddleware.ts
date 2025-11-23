@@ -50,10 +50,7 @@ export const protect = catchAsync(
         user: {
           select: {
             id: true,
-            email: true,
             role: true,
-            firstName: true,
-            lastName: true,
           },
         },
       },
@@ -78,7 +75,10 @@ export const protect = catchAsync(
     }
 
     // 6. Issue new access token
-    const newAccessToken = signAccessToken(storedToken.user.id);
+    const newAccessToken = signAccessToken(
+      storedToken.user.id,
+      storedToken.user.role
+    );
 
     // Set new access cookie
     res.cookie('access-token', newAccessToken, {
@@ -92,10 +92,7 @@ export const protect = catchAsync(
     // Attach user to request
     req.user = {
       id: storedToken.user.id,
-      email: storedToken.user.email,
       role: storedToken.user.role,
-      firstName: storedToken.user.firstName,
-      lastName: storedToken.user.lastName,
     };
 
     next();

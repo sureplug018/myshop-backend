@@ -4,9 +4,14 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
-import userRoutes from './routes/userRoutes';
+
 import { globalErrorHandler } from './utils/errorHandler';
 import { AppError } from './utils/AppError';
+
+import userRoutes from './routes/userRoutes';
+import productRoutes from './routes/productRoutes';
+import categoryRoutes from './routes/categoryRoutes';
+import cartRoutes from './routes/cartRoutes';
 
 const app: Express = express();
 
@@ -71,7 +76,11 @@ function deepSanitize(obj: any): any {
 
 // FIXED: Mutate in place instead of reassigning req.query, req.body, req.params
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  const targets: Array<'body' | 'query' | 'params'> = ['body', 'query', 'params'];
+  const targets: Array<'body' | 'query' | 'params'> = [
+    'body',
+    'query',
+    'params',
+  ];
 
   targets.forEach((prop) => {
     const data = (req as any)[prop];
@@ -91,6 +100,9 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 // === ROUTES ===
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/carts', cartRoutes);
 
 // === 404 CATCH-ALL ===
 app.all(/.*/, (req: Request, _res: Response, next: NextFunction) => {

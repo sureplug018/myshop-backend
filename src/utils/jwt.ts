@@ -1,9 +1,13 @@
 import jwt from 'jsonwebtoken';
 
-export const signAccessToken = (userId: string) => {
-  return jwt.sign({ id: userId }, process.env.ACCESS_TOKEN_SECRET!, {
-    expiresIn: '5m',
-  });
+export const signAccessToken = (userId: string, userRole: string) => {
+  return jwt.sign(
+    { id: userId, role: userRole },
+    process.env.ACCESS_TOKEN_SECRET!,
+    {
+      expiresIn: '5m',
+    }
+  );
 };
 
 export const signRefreshToken = (userId: string) => {

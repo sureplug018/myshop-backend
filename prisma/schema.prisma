@@ -25,9 +25,10 @@ model Product {
   updatedAt    DateTime    @updatedAt
   coverImage   String
   images       String[]
-  categoryId   String?
+  categoryId   String      @default("miscellaneous")
   category     Category?   @relation(fields: [categoryId], references: [id])
   variations   Variation[]
+  cartItems    CartItem[]
 
   @@index([slug])
 }
@@ -62,6 +63,7 @@ model User {
   passwordResetToken    String?
   passwordResetExpires  DateTime?
   role                  String   @default("user")
+  cart                  Cart?
 }
 
 model RefreshToken {
@@ -78,4 +80,29 @@ model RefreshToken {
 
   @@index([userId])
   @@index([token])
+}
+
+model Cart {
+  id        String      @id @default(uuid())
+  userId    String      @unique
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  items     CartItem[]
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([cartId])
+  @@index([productId])
 }
