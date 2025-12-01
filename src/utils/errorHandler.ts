@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { Prisma } from '@prisma/client';
-import { AppError } from './AppError';
+import { AppError } from './appError';
 import logger from './logger'; // ✅ import your logger
 
 interface IError extends Error {

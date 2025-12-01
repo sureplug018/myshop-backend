@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { Request, Response, NextFunction } from 'express';
 import slugify from 'slugify';
 
-import { AppError } from '../utils/AppError';
+import { AppError } from '../utils/appError';
 import { catchAsync } from '../utils/catchAsync';
 
 const prisma = new PrismaClient();

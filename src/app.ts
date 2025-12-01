@@ -6,12 +6,13 @@ import cors from 'cors';
 import morgan from 'morgan';
 
 import { globalErrorHandler } from './utils/errorHandler';
-import { AppError } from './utils/AppError';
+import { AppError } from './utils/appError';
 
 import userRoutes from './routes/userRoutes';
 import productRoutes from './routes/productRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import cartRoutes from './routes/cartRoutes';
+import shippingRoutes from './routes/shippingRoutes';
 
 const app: Express = express();
 
@@ -103,6 +104,7 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/carts', cartRoutes);
+app.use('/api/v1/shippings', shippingRoutes);
 
 // === 404 CATCH-ALL ===
 app.all(/.*/, (req: Request, _res: Response, next: NextFunction) => {

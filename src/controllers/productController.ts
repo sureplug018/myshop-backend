@@ -2,7 +2,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { Request, Response, NextFunction } from 'express';
 import slugify from 'slugify';
 
-import { AppError } from '../utils/AppError';
+import { AppError } from '../utils/appError';
 import { catchAsync } from '../utils/catchAsync';
 
 const prisma = new PrismaClient();
@@ -158,20 +158,8 @@ export const getProductById = catchAsync(
 //   }
 // );
 
-interface createProductBody extends Request {
-  body: {
-    name: string;
-    description?: string;
-    price: string;
-    categoryId?: string;
-    productStock?: number;
-    coverImage: string;
-    images: string[];
-  };
-}
-
 export const createProduct = catchAsync(
-  async (req: createProductBody, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const {
       name,
       description,
@@ -225,20 +213,8 @@ export const createProduct = catchAsync(
   }
 );
 
-interface updateProductBody extends Request {
-  body: {
-    name?: string;
-    description?: string;
-    price?: number;
-    categoryId?: string;
-    productStock?: number;
-    coverImage?: string;
-    images?: string[];
-  };
-}
-
 export const updateProduct = catchAsync(
-  async (req: updateProductBody, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const productId = req.params.id;
 
     if (!productId) return next(new AppError('Product ID is required', 400));

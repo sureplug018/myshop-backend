@@ -1,7 +1,7 @@
 // middleware/restrictTo.ts
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync } from '../utils/catchAsync';
-import { AppError } from '../utils/AppError';
+import { AppError } from '../utils/appError';
 
 export const restrictTo = (...allowedRoles: string[]) => {
   return catchAsync(async (req: Request, res: Response, next: NextFunction) => {

@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 
-import { AppError } from '../utils/AppError';
+import { AppError } from '../utils/appError';
 import { catchAsync } from '../utils/catchAsync';
 import { emailQueue } from '../queues';
 import { signAccessToken, signRefreshToken } from '../utils/jwt';
@@ -12,19 +12,8 @@ import { AuthUser } from '../types/express';
 
 const prisma = new PrismaClient();
 
-interface SignUpRequest extends Request {
-  body: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phoneNumber: string;
-    password: string;
-    passwordConfirm: string;
-  };
-}
-
 export const signUp = catchAsync(
-  async (req: SignUpRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const {
       firstName,
       lastName,
@@ -103,15 +92,8 @@ export const signUp = catchAsync(
   }
 );
 
-interface LoginRequest extends Request {
-  body: {
-    email: string;
-    password: string;
-  };
-}
-
 export const signin = catchAsync(
-  async (req: LoginRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
 
     if (!email || !password)
@@ -183,14 +165,8 @@ export const signin = catchAsync(
   }
 );
 
-interface forgotPasswordRequest extends Request {
-  body: {
-    email: string;
-  };
-}
-
 export const forgotPassword = catchAsync(
-  async (req: forgotPasswordRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const { email } = req.body;
 
     if (!email)
@@ -238,13 +214,8 @@ export const forgotPassword = catchAsync(
   }
 );
 
-interface ResetPasswordRequest extends Request {
-  params: { token?: string };
-  body: { password: string; passwordConfirm: string };
-}
-
 export const resetPassword = catchAsync(
-  async (req: ResetPasswordRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     // 1. Get plain reset token from URL
     const { token } = req.params;
     if (!token) {
@@ -302,12 +273,8 @@ export const resetPassword = catchAsync(
   }
 );
 
-interface AuthRequest extends Request {
-  user?: AuthUser;
-}
-
 export const updatePassword = catchAsync(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const { passwordCurrent, newPassword, passwordConfirm } = req.body;
 
     const user = await prisma.user.findUnique({
@@ -394,7 +361,7 @@ export const updatePassword = catchAsync(
 );
 
 export const logout = catchAsync(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.user!;
 
     // delete all refresh tokens from the user agent
@@ -427,7 +394,7 @@ export const logout = catchAsync(
 );
 
 export const updateUser = catchAsync(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user!;
 
     const { firstName, lastName, phoneNumber } = req.body;

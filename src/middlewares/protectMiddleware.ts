@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import { catchAsync } from '../utils/catchAsync';
 import { verifyJwt, signAccessToken } from '../utils/jwt';
-import { AppError } from '../utils/AppError';
+import { AppError } from '../utils/appError';
 
 const prisma = new PrismaClient();
 

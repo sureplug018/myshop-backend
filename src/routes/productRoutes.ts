@@ -8,19 +8,33 @@ import {
 } from '../controllers/productController';
 import { protect } from '../middlewares/protectMiddleware';
 import { restrictTo } from '../middlewares/restrictTo';
+import { validate } from '../middlewares/validate';
+import {
+  createProductSchema,
+  deleteProductSchema,
+  getProductByIdSchema,
+  updateProductSchema,
+} from '../validate/product.schema';
 
 const router = express.Router();
 
 router.get('/', getAllProducts);
 
-router.get('/:id', getProductById);
+router.get('/:id', validate(getProductByIdSchema), getProductById);
 
-router.post('/create-product', protect, restrictTo('admin'), createProduct);
+router.post(
+  '/create-product',
+  protect,
+  restrictTo('admin'),
+  validate(createProductSchema),
+  createProduct
+);
 
 router.patch(
   '/update-product/:id',
   protect,
   restrictTo('admin'),
+  validate(updateProductSchema),
   updateProduct
 );
 
@@ -28,6 +42,7 @@ router.delete(
   '/delete-product/:id',
   protect,
   restrictTo('admin'),
+  validate(deleteProductSchema),
   deleteProduct
 );
 
