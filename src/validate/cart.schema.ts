@@ -12,5 +12,6 @@ export const addToCartSchema = z.object({
       (val) => Number(val),
       z.number().min(1, 'Quantity must be at least 1')
     ),
+    idempotencyKey: z.uuid('Invalid idempotency key').optional(),
   }),
 });

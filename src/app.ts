@@ -13,6 +13,7 @@ import productRoutes from './routes/productRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import cartRoutes from './routes/cartRoutes';
 import shippingRoutes from './routes/shippingRoutes';
+import orderRoutes from './routes/orderRoutes';
 
 const app: Express = express();
 
@@ -105,6 +106,7 @@ app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/carts', cartRoutes);
 app.use('/api/v1/shippings', shippingRoutes);
+app.use('/api/v1/orders', orderRoutes);
 
 // === 404 CATCH-ALL ===
 app.all(/.*/, (req: Request, _res: Response, next: NextFunction) => {

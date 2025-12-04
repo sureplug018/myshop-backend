@@ -29,6 +29,7 @@ model Product {
   category     Category?   @relation(fields: [categoryId], references: [id])
   variations   Variation[]
   cartItems    CartItem[]
+  orderItems   OrderItem[]
 
   @@index([slug])
 }
@@ -65,6 +66,8 @@ model User {
   role                  String   @default("user")
   cart                  Cart?
   shippingAddress       ShippingAddress?
+  idempotencies         Idempotency[]
+  orders                Order[]
 }
 
 model RefreshToken {
@@ -106,6 +109,7 @@ model CartItem {
 
   @@index([cartId])
   @@index([productId])
+  @@unique([cartId, productId], name: "cartId_productId")
 }
 
 model ShippingAddress {
@@ -118,8 +122,53 @@ model ShippingAddress {
   country    String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  orders     Order[]
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Idempotency {
+  id            String   @id @default(uuid())
+  key           String   @unique  // Full scoped key (e.g., "addToCart-user123-uuid")
+  userId        String
+  action        String   // e.g., "addToCart"
+  result        Json     // Stored response { status, data }
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([key])
+  @@index([expiresAt])
+}
+
+model Order {
+  id          String    @id @default(uuid())
+  userId      String
+  totalAmount Decimal   @db.Decimal(10, 2)
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  items       OrderItem[]
+  addressId   String
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address     ShippingAddress @relation(fields: [addressId], references: [id])
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int      @default(1)
+  price     Decimal  @db.Decimal(10, 2)
+
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
 }
