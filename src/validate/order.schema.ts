@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { he } from 'zod/v4/locales';
 
 export const placeOrderSchema = z.object({
   params: z.object({
@@ -8,6 +9,17 @@ export const placeOrderSchema = z.object({
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
         'Invalid cart ID'
       ),
+  }),
+  body: z.object({
+    addressId: z
+      .string()
+      .regex(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        'Invalid address ID'
+      ),
+  }),
+  headers: z.object({
+    'idempotency-key': z.uuid('Invalid idempotency key').optional(),
   }),
 });
 

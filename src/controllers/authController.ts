@@ -106,6 +106,7 @@ export const signin = catchAsync(
         password: true,
         role: true,
         id: true,
+        firstName: true,
       },
     });
 
@@ -116,7 +117,12 @@ export const signin = catchAsync(
     )
       return next(new AppError('Incorrect email or password', 401));
 
-    const accessToken = signAccessToken(user.id, user.role);
+    const accessToken = signAccessToken(
+      user.id,
+      user.role,
+      email,
+      user.firstName
+    );
     const refreshToken = signRefreshToken(user.id);
 
     // Set cookies
@@ -283,6 +289,8 @@ export const updatePassword = catchAsync(
         password: true,
         id: true,
         role: true,
+        email: true,
+        firstName: true,
       },
     });
 
@@ -308,7 +316,12 @@ export const updatePassword = catchAsync(
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     // sign new access and refresh token
-    const accessToken = signAccessToken(user.id, user.role);
+    const accessToken = signAccessToken(
+      user.id,
+      user.role,
+      user.email,
+      user.firstName
+    );
     const refreshToken = signRefreshToken(user.id);
 
     // Set cookies

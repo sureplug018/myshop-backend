@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/appError';
 import { generateIdempotencyKey } from '../utils/idempotency';
+import { emailQueue } from '../queues';
 
 const prisma = new PrismaClient();
 
@@ -15,12 +16,16 @@ export const placeOrder = catchAsync(
 
     // Idempotency key handling
     const action = 'orderPlacement';
-    const { fullKey, expiresAt } = await generateIdempotencyKey(
+    const { fullKey, expiresAt, cachedResponse } = await generateIdempotencyKey(
       action,
       userId,
-      idempotencyKey,
-      res
+      idempotencyKey
     );
+
+    // 🚀 If cached, return immediately (this prevents duplicate responses)
+    if (cachedResponse) {
+      return res.status(cachedResponse.status).json(cachedResponse.data);
+    }
 
     const cart = await prisma.cart.findUnique({
       where: { id: cartId, userId },
@@ -29,6 +34,14 @@ export const placeOrder = catchAsync(
 
     if (!cart || cart.items.length === 0) {
       return next(new AppError('Cart is empty or not found', 400));
+    }
+
+    const address = await prisma.shippingAddress.findUnique({
+      where: { id: addressId, userId },
+    });
+
+    if (!address) {
+      return next(new AppError('Address not found', 404));
     }
 
     const order = await prisma.order.create({
@@ -60,6 +73,28 @@ export const placeOrder = catchAsync(
     });
 
     // send email to user and admin for the order placement
+    const subject = 'Your Order is Being Processed';
+    // const url = { link: `${req.protocol}://${req.get('host')}` };
+
+    const user = req.user!;
+
+    // offloading the process to a queue
+    await emailQueue.add(
+      'send-welcome-email',
+      {
+        user: {
+          email: user.email,
+          firstName: user.firstName,
+        },
+        type: 'newOrder',
+        subject,
+        data: order,
+      },
+      {
+        priority: 10,
+        attempts: 3,
+      }
+    );
 
     const responseData = {
       status: 'success',
@@ -76,7 +111,7 @@ export const placeOrder = catchAsync(
       create: {
         key: fullKey,
         userId,
-        action: 'orderPlacement',
+        action,
         result: JSON.stringify({ status: 201, data: responseData }),
         expiresAt,
       },
@@ -197,18 +232,84 @@ export const updateOrderStatus = catchAsync(
         data: { status },
       });
       // send cancellation email to user and admin
+      const subject = 'Your Order Has Been Canceled';
+      // const url = { link: `${req.protocol}://${req.get('host')}` };
+
+      const user = req.user!;
+
+      // offloading the process to a queue
+      await emailQueue.add(
+        'send-pending-order-email',
+        {
+          user: {
+            email: user.email,
+            firstName: user.firstName,
+          },
+          type: 'newOrder',
+          subject,
+          data: order,
+        },
+        {
+          priority: 10,
+          attempts: 3,
+        }
+      );
     } else if (order.status === 'shipped' && status === 'delivered') {
       updatedOrder = await prisma.order.update({
         where: { id: orderId },
         data: { status },
       });
       // send delivery email to user
+      const subject = 'Your Order Has Been Delivered';
+      // const url = { link: `${req.protocol}://${req.get('host')}` };
+
+      const user = req.user!;
+
+      // offloading the process to a queue
+      await emailQueue.add(
+        'send-delivered-order-email',
+        {
+          user: {
+            email: user.email,
+            firstName: user.firstName,
+          },
+          type: 'newOrder',
+          subject,
+          data: order,
+        },
+        {
+          priority: 10,
+          attempts: 3,
+        }
+      );
     } else if (order.status === 'pending' && status === 'shipped') {
       updatedOrder = await prisma.order.update({
         where: { id: orderId },
         data: { status },
       });
       // send shipping email to user
+      const subject = 'Your Order Has Been Shipped';
+      // const url = { link: `${req.protocol}://${req.get('host')}` };
+
+      const user = req.user!;
+
+      // offloading the process to a queue
+      await emailQueue.add(
+        'send-shipped-order-email',
+        {
+          user: {
+            email: user.email,
+            firstName: user.firstName,
+          },
+          type: 'newOrder',
+          subject,
+          data: order,
+        },
+        {
+          priority: 10,
+          attempts: 3,
+        }
+      );
     } else {
       return next(new AppError('Invalid status transition', 400));
     }

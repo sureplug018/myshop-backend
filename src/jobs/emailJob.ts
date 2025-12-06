@@ -19,6 +19,12 @@ export const processEmailJob = async (job: Job) => {
     case 'confirmEmail':
       await email.sendConfirmEmail();
       break;
+    case 'newOrder':
+      await email.sendNewOrderNotification();
+      break;
+    case 'orderStatus':
+      await email.sendOrderStatusUpdate();
+      break;
     default:
       logger.warn(`⚠️ Unknown email type: ${type}`);
   }

@@ -51,6 +51,8 @@ export const protect = catchAsync(
           select: {
             id: true,
             role: true,
+            email: true,
+            firstName: true,
           },
         },
       },
@@ -77,7 +79,9 @@ export const protect = catchAsync(
     // 6. Issue new access token
     const newAccessToken = signAccessToken(
       storedToken.user.id,
-      storedToken.user.role
+      storedToken.user.role,
+      storedToken.user.email,
+      storedToken.user.firstName
     );
 
     // Set new access cookie
@@ -93,6 +97,8 @@ export const protect = catchAsync(
     req.user = {
       id: storedToken.user.id,
       role: storedToken.user.role,
+      email: storedToken.user.email,
+      firstName: storedToken.user.firstName,
     };
 
     next();

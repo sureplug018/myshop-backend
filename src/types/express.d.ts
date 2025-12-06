@@ -5,6 +5,8 @@ import { ParsedQs } from 'qs'; // ✅ Import for type reference
 export interface AuthUser {
   id: string;
   role: string;
+  email: string;
+  firstName: string;
 }
 
 // 2️⃣ Extend Express.Request globally (merged with your existing + new validated)

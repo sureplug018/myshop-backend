@@ -41,12 +41,16 @@ export const addItemToCart = catchAsync(
 
     // Idempotency key handling
     const action = 'addToCart';
-    const { fullKey, expiresAt } = await generateIdempotencyKey(
+    const { fullKey, expiresAt, cachedResponse } = await generateIdempotencyKey(
       action,
       userId,
-      idempotencyKey,
-      res
+      idempotencyKey
     );
+
+    // 🚀 If cached, return immediately (this prevents duplicate responses)
+    if (cachedResponse) {
+      return res.status(cachedResponse.status).json(cachedResponse.data);
+    }
 
     // 2. Ensure cart exists (idempotent via upsert)
     let cart = await prisma.cart.upsert({

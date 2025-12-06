@@ -175,7 +175,7 @@ export const createProduct = catchAsync(
     }
 
     // Clean price (remove commas, symbols)
-    const cleanPrice = price.replace(/[^0-9.]/g, '');
+    const cleanPrice = String(price).replace(/[^0-9.]/g, '');
 
     if (isNaN(Number(cleanPrice))) {
       return next(new AppError('Invalid price format', 400));
@@ -237,9 +237,13 @@ export const updateProduct = catchAsync(
 
     const data: any = {};
 
+    const cleanPrice = new Prisma.Decimal(
+      String(price).replace(/[^0-9.]/g, '')
+    );
+
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
-    if (price !== undefined) data.price = price;
+    if (price !== undefined) data.price = cleanPrice;
     if (categoryId !== undefined) data.categoryId = categoryId;
     if (productStock !== undefined) data.productStock = productStock;
     if (coverImage !== undefined) data.coverImage = coverImage;

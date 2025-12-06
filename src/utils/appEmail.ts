@@ -98,4 +98,14 @@ export class Email {
   async sendOrderConfirmation() {
     await this.send('orderConfirmation');
   }
+
+  // Send New Order Notification Email
+  async sendNewOrderNotification() {
+    await this.send('newOrder');
+  }
+
+  // Send Order Status Update Email
+  async sendOrderStatusUpdate() {
+    await this.send('orderStatus');
+  }
 }

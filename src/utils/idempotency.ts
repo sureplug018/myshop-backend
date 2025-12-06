@@ -1,30 +1,36 @@
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
-import { Response } from 'express';
 
 const prisma = new PrismaClient();
 
 export const generateIdempotencyKey = async (
   action: string,
   userId: string,
-  idempotencyKey: string,
-  res: Response
-): Promise<{ fullKey: string; expiresAt: Date }> => {
-  let key = idempotencyKey || randomUUID();
+  idempotencyKey?: string
+): Promise<{
+  fullKey: string;
+  expiresAt: Date;
+  cachedResponse?: { status: number; data: any };
+}> => {
+  const key = idempotencyKey || randomUUID();
   const fullKey = `${action}-${userId}-${key}`;
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour expiry
+  const expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
 
-  // 1. Check for existing idempotency record
-  let idempotency = await prisma.idempotency.findUnique({
+  const existing = await prisma.idempotency.findUnique({
     where: { key: fullKey },
   });
 
-  if (idempotency && new Date(idempotency.expiresAt) > now) {
-    // ✅ Retry: Return cached result immediately
-    const { status, data } = JSON.parse(idempotency.result as string);
-    res.status(status).json(data);
-    return { fullKey, expiresAt };
+  if (existing && new Date(existing.expiresAt) > now) {
+    const parsed = JSON.parse(existing.result as string);
+    return {
+      fullKey,
+      expiresAt,
+      cachedResponse: {
+        status: parsed.status,
+        data: parsed.data,
+      },
+    };
   }
 
   return { fullKey, expiresAt };
