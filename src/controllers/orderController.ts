@@ -80,7 +80,7 @@ export const placeOrder = catchAsync(
 
     // offloading the process to a queue
     await emailQueue.add(
-      'send-welcome-email',
+      'send-new-order-email',
       {
         user: {
           email: user.email,
@@ -245,7 +245,7 @@ export const updateOrderStatus = catchAsync(
             email: user.email,
             firstName: user.firstName,
           },
-          type: 'newOrder',
+          type: 'orderStatus',
           subject,
           data: order,
         },
@@ -273,7 +273,7 @@ export const updateOrderStatus = catchAsync(
             email: user.email,
             firstName: user.firstName,
           },
-          type: 'newOrder',
+          type: 'orderStatus',
           subject,
           data: order,
         },
@@ -301,7 +301,7 @@ export const updateOrderStatus = catchAsync(
             email: user.email,
             firstName: user.firstName,
           },
-          type: 'newOrder',
+          type: 'orderStatus',
           subject,
           data: order,
         },

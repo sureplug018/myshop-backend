@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to My Shop</title>
+  <title>Order Confirmation - My Shop</title>
   <style>
     body {
       margin: 0;
@@ -47,6 +47,53 @@
       margin: 15px 0;
     }
 
+    .order-details {
+      text-align: left;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    .order-details h2 {
+      font-size: 18px;
+      color: #111827;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    td {
+      color: #6b7280;
+    }
+
+    .total-row {
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .total-row td {
+      border-top: 2px solid #e5e7eb;
+      padding-top: 15px;
+    }
+
     .button {
       display: inline-block;
       background-color: #2563eb;
@@ -78,29 +125,53 @@
     <div class="logo">
       <img src="https://res.cloudinary.com/demo/image/upload/v1700000000/ecommerce-logo.png" alt="My Shop" />
     </div>
-
-    <h1>Welcome to My Shop, <%= firstName %> 🎉</h1>
-
+    <h1>Order Confirmed, <%= firstName %>! 🎉</h1>
     <p>
-      We’re excited to have you onboard! My Shop is your one-stop
-      e-commerce platform for quality products, exclusive deals, and a
-      seamless shopping experience across regions.
+      Thank you for your purchase! Your order has been confirmed and is being prepared for shipment.
+      We're excited to bring you these amazing products from My Shop.
     </p>
-
-    <p>Start exploring today and find amazing products just for you.</p>
-
-    <div style="text-align: center">
-      <a href="<%= data %>" class="button">Start Shopping</a>
+    <div class="order-details">
+      <h2>Order #<%= orderNumber %> - Placed on <%= orderDate %></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% data.forEach(function(item) { %>
+          <tr>
+            <td><%= item.name %></td>
+            <td><%= item.quantity %></td>
+            <td><%= item.price %></td>
+            <td><%= item.total %></td>
+          </tr>
+          <% }); %>
+          <tr class="total-row">
+            <td colspan="3">Subtotal</td>
+            <td><%= subtotal %></td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="3">Shipping</td>
+            <td><%= shipping %></td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="3"><strong>Total</strong></td>
+            <td><strong><%= total %></strong></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-
     <p style="margin-top: 25px; color: #6b7280">
-      If you didn’t create this account, please ignore this email.
+      We'll send you a shipping update soon. If you have any questions, contact support.
     </p>
   </div>
-
   <div class="footer">
     © <%= new Date().getFullYear() %> My Shop. All rights reserved.<br />
-    Lagos, Nigeria<br />
+    Enugu, Nigeria<br />
     Need help?
     <a href="mailto:support@myshop.com">support@myshop.com</a>
   </div>
