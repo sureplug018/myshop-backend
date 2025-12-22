@@ -1,0 +1,53 @@
+# ========================
+# Stage 1: Build
+# ========================
+FROM node:20-alpine AS builder
+
+# Create user
+RUN addgroup -S app && adduser -S app -G app
+
+WORKDIR /app
+
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy package files + prisma schema first
+COPY package.json pnpm-lock.yaml ./
+COPY prisma ./prisma
+
+# Install deps (dev + prod) and generate prisma client
+RUN pnpm install --frozen-lockfile
+
+# Copy the rest of the source
+COPY . .
+
+# Build TypeScript
+RUN pnpm build
+
+# ========================
+# Stage 2: Production Image
+# ========================
+FROM node:20-alpine AS runner
+
+# Create user again
+RUN addgroup -S app && adduser -S app -G app
+
+WORKDIR /app
+
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy only necessary files from builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
+
+# Fix ownership
+RUN chown -R app:app /app
+USER app
+
+# Run the worker
+# CMD ["node", "dist/workers/emailWorker.js"]
+CMD ["pnpm", "emailWorker:start"]
+# ========================
