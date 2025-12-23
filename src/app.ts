@@ -7,6 +7,7 @@ import morgan from 'morgan';
 
 import { globalErrorHandler } from './utils/errorHandler';
 import { AppError } from './utils/appError';
+import { authLimiter } from './middlewares/authRateLimiter';
 
 import userRoutes from './routes/userRoutes';
 import productRoutes from './routes/productRoutes';
@@ -101,7 +102,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // === ROUTES ===
-app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/users', authLimiter, userRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/carts', cartRoutes);

@@ -53,11 +53,17 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src/views ./views
+COPY --from=builder /app/entrypoint.sh ./
 
 # Set ownership
 RUN chown -R app:app /app
+
+# make the entrypoint.sh executable
+RUN chmod +x /app/entrypoint.sh
 USER app
 
 EXPOSE 3000
-CMD ["pnpm", "start"]
+
+
+ENTRYPOINT ["/app/entrypoint.sh"]
 # ==========================

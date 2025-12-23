@@ -49,5 +49,5 @@ USER app
 
 # Run the worker
 # CMD ["node", "dist/workers/emailWorker.js"]
-CMD ["pnpm", "emailWorker:start"]
+CMD ["node", "dist/workers/emailWorker.js"]
 # ========================
