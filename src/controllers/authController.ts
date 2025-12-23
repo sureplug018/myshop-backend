@@ -8,7 +8,11 @@ import { catchAsync } from '../utils/catchAsync';
 import { emailQueue } from '../queues';
 import { signAccessToken, signRefreshToken } from '../utils/jwt';
 import { generateResetToken } from '../utils/generateHash';
-import { AuthUser } from '../types/express';
+import {
+  checkLoginBlock,
+  recordFailedLogin,
+  resetLoginAttempts,
+} from '../utils/loginAttempts';
 
 const prisma = new PrismaClient();
 
@@ -96,56 +100,80 @@ export const signin = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
 
-    if (!email || !password)
+    if (!email || !password) {
       return next(new AppError('Please provide email and password', 400));
+    }
 
     const user = await prisma.user.findUnique({
       where: { email },
       select: {
+        id: true,
         email: true,
         password: true,
         role: true,
-        id: true,
         firstName: true,
       },
     });
 
-    if (
-      !user ||
-      // user.role !== 'user' || admins can use the same endpoint, but redirect to dashboard based on the role on the response
-      !(await bcrypt.compare(password, user.password))
-    )
+    // Do NOT reveal if email exists
+    if (!user) {
       return next(new AppError('Incorrect email or password', 401));
+    }
+
+    // 🔒 Check account lock
+    const block = await checkLoginBlock(user.id);
+    if (block.blocked) {
+      return next(
+        new AppError(
+          `Too many failed login attempts. Try again in ${Math.ceil(
+            (block.ttl ?? 0) / 60
+          )} minutes.`,
+          429
+        )
+      );
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      const attempts = await recordFailedLogin(user.id);
+      const remaining = 4 - attempts;
+
+      return next(
+        new AppError(
+          remaining > 0
+            ? `Incorrect email or password. ${remaining} attempt(s) left.`
+            : 'Too many failed login attempts. Account temporarily locked.',
+          401
+        )
+      );
+    }
+
+    // ✅ Successful login → reset attempts
+    await resetLoginAttempts(user.id);
 
     const accessToken = signAccessToken(
       user.id,
       user.role,
-      email,
+      user.email,
       user.firstName
     );
     const refreshToken = signRefreshToken(user.id);
 
-    // Set cookies
-    const accessCookieOptions = {
+    res.cookie('access-token', accessToken, {
       secure: true,
       httpOnly: true,
-      path: '/',
-      sameSite: 'none' as const,
-      maxAge: 5 * 60 * 1000, //5 mins
-    };
+      sameSite: 'none',
+      maxAge: 5 * 60 * 1000,
+    });
 
-    const refreshCookieOptions = {
+    res.cookie('refresh-token', refreshToken, {
       secure: true,
       httpOnly: true,
-      path: '/',
-      sameSite: 'none' as const,
-      maxAge: 30 * 24 * 60 * 60 * 1000, //30 days
-    };
+      sameSite: 'none',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
 
-    res.cookie('access-token', accessToken, accessCookieOptions);
-    res.cookie('refresh-token', refreshToken, refreshCookieOptions);
-
-    // create new refresh token to allow multiple device login
     await prisma.refreshToken.create({
       data: {
         token: refreshToken,
@@ -158,9 +186,9 @@ export const signin = catchAsync(
 
     res.status(200).json({
       status: 'success',
-      accessToken,
-      refreshToken,
       data: {
+        accessToken,
+        refreshToken,
         user: {
           id: user.id,
           email: user.email,

@@ -53,7 +53,14 @@ export class Email {
     templateName: string,
     data: Record<string, any>
   ) {
-    const templatePath = path.join(__dirname, `../views/${templateName}.ejs`);
+    // docker new location
+    const templatePath = path.join(
+      process.cwd(),
+      'views',
+      `${templateName}.ejs`
+    );
+
+    // const templatePath = path.join(__dirname, `../views/${templateName}.ejs`);
     if (!fs.existsSync(templatePath)) {
       throw new Error(`Email template '${templateName}.ejs' not found`);
     }
