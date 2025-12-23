@@ -53,6 +53,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    develop:
+      watch:
+        # Sync source code
+        - action: sync
+          path: ./src
+          target: /app/src
+
+        # Rebuild if dependencies change
+        - action: rebuild
+          path: ./package.json
+
+        - action: rebuild
+          path: ./pnpm-lock.yaml
+
+        # Sync templates
+        - action: sync
+          path: ./src/views
+          target: /app/views
 
   # ----------------------
   # Worker
@@ -70,6 +88,21 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+
+        - action: rebuild
+          path: ./package.json
+
+        - action: rebuild
+          path: ./pnpm-lock.yaml
+
+        - action: sync
+          path: ./src/views
+          target: /app/views
 
 # ----------------------
 # Volumes
